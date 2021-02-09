@@ -53,7 +53,7 @@ app.post('/webhook/discord/:id/:key', async (request, { id, key }) => {
                 "content": null,
                 "embeds": [
                     {
-                        "title": `${giverData.pone.name} gave ${poneData.pone.name} ${webhookData.count} good pone points!`,
+                        "title": `${giverData.pone.name} gave ${poneData.pone.name} ${webhookData.count} good pone point${ webhookData.count > 1 ? 's' : '' }!`,
                         "description": webhookData.message,
                         "url": `https://points.horse${poneData.pone.links.page}`,
                         "color": 5814783,
