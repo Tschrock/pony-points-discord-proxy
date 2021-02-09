@@ -1,0 +1,7 @@
+name = "discordponypoints"
+account_id = "7156f218e9285f8c0e1baff47fd8e526"
+type = "webpack"
+webpack_config = "webpack.config.js"
+route = ""
+workers_dev = true
+zone_id = ""
