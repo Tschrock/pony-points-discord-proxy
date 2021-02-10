@@ -1,72 +1,46 @@
 import { Router, Method, Params } from 'tiny-request-router';
+import { WebhookEvent } from './models/WebhookEvent';
+
 declare const PONY_POINTS_API_SECRET: string;
 
 const app = new Router<(request: Request, params: Params) => Response | Promise<Response>>();
 
-interface WebhookBody {
-    id: number;
-    count: number;
-    event: string;
-    granted_at: string;
-    links: {
-        self: string;
-        pone: string;
-        granted_by: string;
-    };
-    message: string;
-    occurred_at: string;
-}
-
-interface Pone {
-    pone: {
-        slug: string;
-        avatar_url: string;
-        joined_at: string;
-        links: {
-            self: string;
-            page: string;
-            achievements: string;
-            points: string;
-            granted_points: string;
-        };
-        name: string;
-        points_count: number;
-    };
-}
-
 app.post('/webhook/discord/:id/:key', async (request, { id, key }) => {
 
-    const webhookData: WebhookBody = await request.json();
+    const webhookData: WebhookEvent = await request.json();
 
-    if (webhookData.event === "app.points.create") {
+    switch (webhookData.event) {
+        case "app.points.receive":
 
-        const poneData: Pone = await (await fetch(`https://points.horse${webhookData.links.pone}`, { headers: { "Authorization": `Api-Key ${PONY_POINTS_API_SECRET}` } })).json();
-        const giverData: Pone = await (await fetch(`https://points.horse${webhookData.links.granted_by}`, { headers: { "Authorization": `Api-Key ${PONY_POINTS_API_SECRET}` } })).json();
+            const pointData = webhookData.point
+            const poneData: Pone = await (await fetch(`https://points.horse${pointData.links.pone}`, { headers: { "Authorization": `Api-Key ${PONY_POINTS_API_SECRET}` } })).json();
+            const giverData: Pone = await (await fetch(`https://points.horse${pointData.links.granted_by}`, { headers: { "Authorization": `Api-Key ${PONY_POINTS_API_SECRET}` } })).json();
 
-        return fetch(`https://discord.com/api/webhooks/${id}/${key}`, {
-            method: 'POST',
-            headers: {
-                "User-Agent": "Pony Points Discord Proxy (https://github.com/tschrock, v1.0.0)",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                "content": null,
-                "embeds": [
-                    {
-                        "title": `${giverData.pone.name} gave ${poneData.pone.name} ${webhookData.count} good pone point${ webhookData.count > 1 ? 's' : '' }!`,
-                        "description": webhookData.message,
-                        "url": `https://points.horse${poneData.pone.links.page}`,
-                        "color": 5814783,
-                        "thumbnail": {
-                            "url": `https://points.horse${poneData.pone.avatar_url}`
+            return fetch(`https://discord.com/api/webhooks/${id}/${key}`, {
+                method: 'POST',
+                headers: {
+                    "User-Agent": "Pony Points Discord Proxy (https://github.com/tschrock, v1.0.0)",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    "content": null,
+                    "embeds": [
+                        {
+                            "title": `${giverData.pone.name} gave ${poneData.pone.name} ${pointData.count} good pone point${pointData.count > 1 ? 's' : ''}!`,
+                            "description": pointData.message,
+                            "url": `https://points.horse${poneData.pone.links.page}`,
+                            "color": 5814783,
+                            "thumbnail": {
+                                "url": `https://points.horse${poneData.pone.avatar_url}`
+                            }
                         }
-                    }
-                ]
-            })
-        });
-    }
-    else {
-        return new Response("", { status: 200, statusText: "OK" });
+                    ],
+                    "username": "Pony Points",
+                    "avatar_url": "https://derpicdn.net/img/view/2017/8/1/1500461.png"
+                })
+            });
+        default:
+            return new Response("", { status: 200, statusText: "OK" });
     }
 
 });
